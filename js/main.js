@@ -6,7 +6,7 @@
 let productos = [];
 let productosBase = [];
 
-fetch("./js/productos.json")
+fetch("https://script.google.com/macros/s/AKfycbwtJU1Npo3-6E4_BYHCX2hNmEejXQks1kvDlbFCXeVhBtSn7hdfiw7eDNJkt33dV-yF/exec")
   .then(r => r.json())
   .then(data => {
     productos = data;
