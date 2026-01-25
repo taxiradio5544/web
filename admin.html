@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vanocz Admin</title>
+  <style>
+    body{font-family:system-ui;max-width:760px;margin:20px auto;padding:0 16px}
+    label{display:block;margin:12px 0 6px;font-weight:600}
+    input,select,button{width:100%;padding:10px;border-radius:12px;border:1px solid #ccc}
+    button{cursor:pointer;font-weight:800}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .ok{color:green;margin-top:10px} .err{color:#b00020;margin-top:10px}
+    img{max-width:200px;border-radius:14px;margin-top:10px}
+    .card{border:1px solid #eee;border-radius:16px;padding:14px;margin-top:18px}
+    small{color:#666}
+  </style>
+</head>
+<body>
+  <h1>Vanocz Admin</h1>
+  <p><small>Sube foto (HEIC ok), guarda producto en Google Sheets, aparece en la tienda al refrescar.</small></p>
+
+  <div class="card">
+    <label>Token Admin</label>
+    <input id="adminToken" type="password" placeholder="Solo Vane/Romi" />
+
+    <label>Categoría</label>
+    <select id="categoria">
+      <option value="mallas">Mallas</option>
+      <option value="remeras">Remeras</option>
+      <option value="short">Shorts</option>
+    </select>
+
+    <label>Título</label>
+    <input id="titulo" placeholder="Ej: Malla cebra" />
+
+    <div class="row">
+      <div>
+        <label>Precio</label>
+        <input id="precio" type="number" placeholder="1299" />
+      </div>
+      <div>
+        <label>Foto</label>
+        <input id="foto" type="file" accept="image/*" />
+      </div>
+    </div>
+
+    <button id="btn">Subir y guardar</button>
+
+    <div id="msg"></div>
+    <img id="preview" style="display:none" />
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    $("btn").addEventListener("click", async () => {
+      $("msg").textContent = "";
+      $("msg").className = "";
+
+      const adminToken = $("adminToken").value.trim();
+      const categoria = $("categoria").value.trim();
+      const titulo = $("titulo").value.trim();
+      const precio = Number($("precio").value || 0);
+      const file = $("foto").files[0];
+
+      if (!adminToken || !categoria || !titulo || !file) {
+        $("msg").textContent = "Faltan datos (token, categoría, título o foto).";
+        $("msg").className = "err";
+        return;
+      }
+
+      try {
+        $("msg").textContent = "Subiendo imagen...";
+        const fileBase64 = await fileToBase64(file);
+
+        const upRes = await fetch("/.netlify/functions/upload-image", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ fileBase64 })
+        });
+        const up = await upRes.json();
+        if (!up.ok) throw new Error("Upload: " + JSON.stringify(up.error));
+
+        $("preview").src = up.url;
+        $("preview").style.display = "block";
+
+        $("msg").textContent = "Guardando producto...";
+        const saveRes = await fetch("/.netlify/functions/create-product", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ adminToken, categoria, titulo, precio, imagen: up.url })
+        });
+        const save = await saveRes.json();
+        if (!save.ok) throw new Error("Save: " + JSON.stringify(save.error));
+
+        $("msg").textContent = `✅ Guardado como: ${save.id}. Ya aparece en la tienda al refrescar.`;
+        $("msg").className = "ok";
+
+        $("titulo").value = "";
+        $("precio").value = "";
+        $("foto").value = "";
+
+      } catch (e) {
+        $("msg").textContent = "❌ " + e.message;
+        $("msg").className = "err";
+      }
+    });
+  </script>
+</body>
+</html>
