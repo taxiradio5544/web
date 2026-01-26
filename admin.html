@@ -83,11 +83,15 @@
         $("msg").textContent = "Subiendo imagen...";
         const fileBase64 = await fileToBase64(file);
 
-        const upRes = await fetch("/.netlify/functions/upload-image", {
+        const saveRes = await fetch("/.netlify/functions/create-products", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ fileBase64 })
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + adminToken
+          },
+          body: JSON.stringify({ categoria, titulo, precio, imagen: up.url })
         });
+
         const up = await upRes.json();
         if (!up.ok) throw new Error("Upload: " + JSON.stringify(up.error));
 
