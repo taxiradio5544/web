@@ -7,36 +7,13 @@ let productos = [];
 let productosBase = [];
 
 //script nuevo
-fetch("https://script.google.com/macros/s/AKfycbwtJU1Npo3-6E4_BYHCX2hNmEejXQks1kvDlbFCXeVhBtSn7hdfiw7eDNJkt33dV-yF/exec?action=get")
+fetch("/.netlify/functions/get-products")
   .then(r => r.json())
   .then(data => {
-    // si tu script devuelve {products:[...]} o directo [...]
-    const arr = Array.isArray(data) ? data : (data.products || data.data || []);
-
-    const normalizados = arr.map(p => {
-      const cat = (p.categoria && typeof p.categoria === "object")
-        ? p.categoria
-        : {
-            id: String(p.categoria || "todos").toLowerCase(),
-            nombre: String(p.categoria || "Productos")
-              .toLowerCase()
-              .replace(/^\w/, c => c.toUpperCase())
-          };
-
-      return {
-        id: String(p.id ?? ""),
-        titulo: String(p.titulo ?? ""),
-        precio: Number(p.precio ?? 0),
-        imagen: String(p.imagen ?? ""),
-        categoria: cat
-      };
-    });
-
-    productos = normalizados;
+    productos = data;
     productosBase = productos.slice();
     render();
-  })
-  .catch(err => console.error("Error cargando productos:", err));
+  });
 
 
 
