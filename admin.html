@@ -45,7 +45,8 @@
       </div>
     </div>
 
-    <button id="btn">Subir y guardar</button>
+    <button id="btn" type="button">Subir y guardar</button>
+
 
     <div id="msg"></div>
     <img id="preview" style="display:none" />
@@ -62,63 +63,74 @@
         reader.readAsDataURL(file);
       });
     }
+    console.log("admin.js cargado");
 
-    $("btn").addEventListener("click", async () => {
-      $("msg").textContent = "";
-      $("msg").className = "";
+    $("btn").addEventListener("click", async (e) => {
+  e.preventDefault();
+  console.log("CLICK");
 
-      const adminToken = $("adminToken").value.trim();
-      const categoria = $("categoria").value.trim();
-      const titulo = $("titulo").value.trim();
-      const precio = Number($("precio").value || 0);
-      const file = $("foto").files[0];
+  $("msg").textContent = "";
+  $("msg").className = "";
 
-      if (!adminToken || !categoria || !titulo || !file) {
-        $("msg").textContent = "Faltan datos (token, categoría, título o foto).";
-        $("msg").className = "err";
-        return;
-      }
+  try {
+    const adminToken = $("adminToken").value.trim();
+    const categoria = $("categoria").value.trim();
+    const titulo = $("titulo").value.trim();
+    const precio = Number($("precio").value || 0);
+    const file = $("foto").files[0];
 
-      try {
-        $("msg").textContent = "Subiendo imagen...";
-        const fileBase64 = await fileToBase64(file);
+    console.log({ adminToken: !!adminToken, categoria, titulo, precio, file: !!file });
 
-        const saveRes = await fetch("/.netlify/functions/create-products", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + adminToken
-          },
-          body: JSON.stringify({ categoria, titulo, precio, imagen: up.url })
-        });
+    if (!adminToken || !categoria || !titulo || !file) {
+      $("msg").textContent = "Faltan datos (token, categoría, título o foto).";
+      $("msg").className = "err";
+      return;
+    }
 
-        const up = await upRes.json();
-        if (!up.ok) throw new Error("Upload: " + JSON.stringify(up.error));
+    $("msg").textContent = "Subiendo imagen...";
+    const fileBase64 = await fileToBase64(file);
 
-        $("preview").src = up.url;
-        $("preview").style.display = "block";
+      const upRes = await fetch("/.netlify/functions/upload-image", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ fileBase64 })
+      });
 
-        $("msg").textContent = "Guardando producto...";
-        const saveRes = await fetch("/.netlify/functions/create-products", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ adminToken, categoria, titulo, precio, imagen: up.url })
-        });
-        const save = await saveRes.json();
-        if (!save.ok) throw new Error("Save: " + JSON.stringify(save.error));
+      console.log("upload status", upRes.status);
+      const up = await upRes.json();
+      console.log("upload json", up);
 
-        $("msg").textContent = `✅ Guardado como: ${save.id}. Ya aparece en la tienda al refrescar.`;
-        $("msg").className = "ok";
+      if (!up.ok) throw new Error("Upload: " + JSON.stringify(up.error || up));
 
-        $("titulo").value = "";
-        $("precio").value = "";
-        $("foto").value = "";
+      $("preview").src = up.url;
+      $("preview").style.display = "block";
 
-      } catch (e) {
-        $("msg").textContent = "❌ " + e.message;
-        $("msg").className = "err";
-      }
-    });
+      $("msg").textContent = "Guardando producto...";
+      const saveRes = await fetch("/.netlify/functions/create-products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + adminToken
+        },
+        body: JSON.stringify({ categoria, titulo, precio, imagen: up.url })
+      });
+
+      console.log("save status", saveRes.status);
+      const save = await saveRes.json();
+      console.log("save json", save);
+
+      if (!save.ok) throw new Error("Save: " + JSON.stringify(save.error || save));
+
+      $("msg").textContent = `✅ Guardado.`;
+      $("msg").className = "ok";
+
+    } catch (err) {
+      console.error(err);
+      $("msg").textContent = "❌ " + (err?.message || String(err));
+      $("msg").className = "err";
+    }
+  });
+
   </script>
 </body>
 </html>
