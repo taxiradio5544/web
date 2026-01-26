@@ -39,6 +39,7 @@ exports.handler = async (event) => {
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, {
       method: "POST",
+      headers: form.getHeaders(),
       body: form,
     });
 
