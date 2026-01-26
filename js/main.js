@@ -10,10 +10,12 @@ let productosBase = [];
 fetch("/.netlify/functions/get-products")
   .then(r => r.json())
   .then(data => {
-    productos = data;
+    productos = data.products || [];
     productosBase = productos.slice();
     render();
-  });
+  })
+  .catch(err => console.error("Error cargando productos:", err));
+
 
 
 
