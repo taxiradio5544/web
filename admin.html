@@ -117,6 +117,10 @@
 
       console.log("save status", saveRes.status);
       const save = await saveRes.json();
+      console.log("SAVE RESPONSE", save);
+      $("msg").textContent = "✅ Guardado: " + JSON.stringify(save);
+      $("msg").className = "ok";
+
       console.log("save json", save);
 
       if (!save.ok) throw new Error("Save: " + JSON.stringify(save.error || save));
