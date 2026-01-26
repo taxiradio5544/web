@@ -95,7 +95,7 @@
         $("preview").style.display = "block";
 
         $("msg").textContent = "Guardando producto...";
-        const saveRes = await fetch("/.netlify/functions/create-product", {
+        const saveRes = await fetch("/.netlify/functions/create-products", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({ adminToken, categoria, titulo, precio, imagen: up.url })
