@@ -111,6 +111,12 @@
       const titulo = $("titulo").value.trim();
       const precio = Number($("precio").value || 0);
       const file = $("foto").files[0];
+          // ✅ defaults para campos nuevos (si todavía no agregaste inputs)
+    const precio_oferta = Number($("precio_oferta")?.value || 0) || "";
+    const stock = Number($("stock")?.value || 1) || 1;
+    const activo = ($("activo")?.value || "si").trim().toLowerCase();
+    const talles = ($("talles")?.value || "").trim();
+
 
       if (!adminToken || !categoria || !titulo || !file) {
         setMsg("Faltan datos (token, categoría, título o foto).", "err");
