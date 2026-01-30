@@ -43,7 +43,7 @@ exports.handler = async (event) => {
     body.append("timestamp", String(timestamp));
     body.append("folder", folder);
     body.append("signature", signature);
-
+    body.append("format", "jpg");
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

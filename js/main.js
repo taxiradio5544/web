@@ -41,6 +41,7 @@ console.log("ordenar:", ordenar);
 function render() {
   const texto = (buscador?.value || "").trim().toLowerCase();
   const modo = (ordenar?.value || "relevancia").trim().toLowerCase();
+  const imgUrl = producto.imagen.replace("/image/upload/", "/image/upload/f_jpg/");
 
   let lista = productosBase.slice();
 
