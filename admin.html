@@ -106,6 +106,7 @@
       $("preview").style.display = "block";
 
       $("msg").textContent = "Guardando producto...";
+      console.log("Voy a guardar:", { categoria, titulo, precio, imagen: up.url });
       const saveRes = await fetch("/.netlify/functions/create-products", {
         method: "POST",
         headers: {
