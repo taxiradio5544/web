@@ -10,17 +10,15 @@ let productosBase = [];
 fetch("/.netlify/functions/get-products")
   .then(r => r.json())
   .then(data => {
-    productos = data.products.filter(p => 
-      String(p.activo || "si").toLowerCase() === "si"
+    const arr = data.products || [];
+    productos = arr.filter(p =>
+      String(p.activo || "si").toLowerCase() === "si" &&
+      Number(p.stock ?? 0) > 0
     );
     productosBase = productos.slice();
     render();
   })
   .catch(err => console.error("Error cargando productos:", err));
-
-
-
-
 
 const aside = document.querySelector("aside");
 const contenedorProductos = document.querySelector("#contenedor-productos");
@@ -111,13 +109,23 @@ function cargarProductos(productosElegidos) {
 
     productosElegidos.forEach(producto => {
 
+        const tieneOferta =
+          producto.precio_oferta !== "" &&
+          producto.precio_oferta != null &&
+          Number(producto.precio_oferta) > 0;
+
+        const precioHtml = tieneOferta
+          ? `<p class="producto-precio"><s>$${producto.precio}</s> <strong>$${producto.precio_oferta}</strong></p>`
+          : `<p class="producto-precio">$${producto.precio}</p>`;
+        const stockHtml = `<small style="opacity:.75">Stock: ${Number(producto.stock ?? 0)}</small>`;
         const div = document.createElement("div");
         div.classList.add("producto");
         div.innerHTML = `
             <img class="producto-imagen" src="${producto.imagen}" alt="${producto.titulo}">
             <div class="producto-detalles">
                 <h3 class="producto-titulo">${producto.titulo}</h3>
-                <p class="producto-precio">$${producto.precio}</p>
+                ${precioHtml}
+                ${stockHtml}
                 <button class="producto-agregar" id="${producto.id}">Agregar</button>
             </div>
         `;
@@ -127,6 +135,7 @@ function cargarProductos(productosElegidos) {
 
     actualizarBotonesAgregar();
 }
+
 
 
 botonesCategorias.forEach(boton => {

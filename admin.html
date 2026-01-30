@@ -146,7 +146,16 @@
 
         // 2) Guardar producto en Google Sheets (via Netlify Function)
         setMsg("Guardando producto...", "");
-        const payload = { categoria, titulo, precio, imagen: imagenFinal };
+        const payload = {
+          categoria,
+          titulo,
+          precio,
+          precio_oferta,
+          stock,
+          activo,
+          imagen: imagenFinal
+        };
+
         console.log("Voy a guardar:", payload);
 
         const saveRes = await fetch("/.netlify/functions/create-products", {
