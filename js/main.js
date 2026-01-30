@@ -11,14 +11,21 @@ fetch("/.netlify/functions/get-products")
   .then(r => r.json())
   .then(data => {
     const arr = data.products || [];
-    productos = arr.filter(p =>
-      String(p.activo || "si").toLowerCase() === "si" &&
-      Number(p.stock ?? 0) > 0
-    );
+
+    productos = arr.filter(p => {
+      const activo = String((p.activo ?? "si")).trim().toLowerCase();
+
+      // ✅ stock vacío o null => lo tomamos como "hay stock" para no borrar productos viejos
+      const stock = (p.stock === "" || p.stock == null) ? 999 : Number(p.stock);
+
+      return activo === "si" && Number.isFinite(stock) && stock > 0;
+    });
+
     productosBase = productos.slice();
     render();
   })
   .catch(err => console.error("Error cargando productos:", err));
+
 
 const aside = document.querySelector("aside");
 const contenedorProductos = document.querySelector("#contenedor-productos");
