@@ -24,7 +24,7 @@
 
   <div class="card">
     <label>Token Admin</label>
-    <input id="adminToken" type="password" placeholder="Solo Vane/Romi" />
+    <input id="adminToken" type="password" placeholder="contraseña" />
 
     <label>Categoría</label>
     <select id="categoria">
@@ -84,6 +84,18 @@
       catch { return { raw: text }; }
     }
 
+    // ✅ NUEVO: forzar JPG en URLs de Cloudinary (para que HEIC se vea en todos lados)
+    function cloudinaryToJpg(url) {
+      if (!url) return url;
+      if (!url.includes("res.cloudinary.com")) return url;
+
+      // Si ya tiene transformación f_..., no duplicamos
+      if (url.includes("/image/upload/f_")) return url;
+
+      // Fuerza JPG (compatibilidad total)
+      return url.replace("/image/upload/", "/image/upload/f_jpg/");
+    }
+
     console.log("admin.js cargado");
 
     $("btn").addEventListener("click", async (e) => {
@@ -126,12 +138,15 @@
           throw new Error("Upload falló: " + JSON.stringify(up.error || up));
         }
 
-        $("preview").src = up.url;
+        // ✅ NUEVO: usar URL transformada (JPG) para preview y para guardar en Sheets
+        const imagenFinal = cloudinaryToJpg(up.url);
+
+        $("preview").src = imagenFinal;
         $("preview").style.display = "block";
 
         // 2) Guardar producto en Google Sheets (via Netlify Function)
         setMsg("Guardando producto...", "");
-        const payload = { categoria, titulo, precio, imagen: up.url };
+        const payload = { categoria, titulo, precio, imagen: imagenFinal };
         console.log("Voy a guardar:", payload);
 
         const saveRes = await fetch("/.netlify/functions/create-products", {
