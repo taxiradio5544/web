@@ -10,7 +10,9 @@ let productosBase = [];
 fetch("/.netlify/functions/get-products")
   .then(r => r.json())
   .then(data => {
-    productos = data.products || [];
+    productos = data.products.filter(p => 
+      String(p.activo || "si").toLowerCase() === "si"
+    );
     productosBase = productos.slice();
     render();
   })
