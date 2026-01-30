@@ -141,6 +141,8 @@ function cargarProductos(productosElegidos) {
     })
 
     actualizarBotonesAgregar();
+    activarZoomImagenes();
+
 }
 
 
@@ -231,4 +233,22 @@ function actualizarNumerito() {
     if (numeritoFloat) numeritoFloat.innerText = nuevoNumerito;
 }
 
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
 
+function activarZoomImagenes() {
+  document.querySelectorAll(".producto-imagen").forEach(img => {
+    img.addEventListener("click", () => {
+      lightboxImg.src = img.src;
+      lightbox.style.display = "flex";
+    });
+  });
+}
+
+// cerrar
+lightbox.addEventListener("click", () => {
+  lightbox.style.display = "none";
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") lightbox.style.display = "none";
+});
