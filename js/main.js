@@ -115,6 +115,17 @@ function cargarProductos(productosElegidos) {
     contenedorProductos.innerHTML = "";
 
     productosElegidos.forEach(producto => {
+        const tallesArr = String(producto.talles || "")
+          .split(",")
+          .map(t => t.trim())
+          .filter(Boolean);
+
+        const tallesHtml = tallesArr.length
+          ? `<select class="producto-talles" data-producto="${producto.id}">
+              <option value="">Talle...</option>
+              ${tallesArr.map(t => `<option value="${t}">${t}</option>`).join("")}
+            </select>`
+          : `<div class="muted" style="opacity:.75;font-size:12px">Sin talles</div>`;
 
         const tieneOferta =
           producto.precio_oferta !== "" &&
@@ -133,6 +144,7 @@ function cargarProductos(productosElegidos) {
                 <h3 class="producto-titulo">${producto.titulo}</h3>
                 ${precioHtml}
                 ${stockHtml}
+                ${tallesHtml}
                 <button class="producto-agregar" id="${producto.id}">Agregar</button>
             </div>
         `;
@@ -210,14 +222,31 @@ function agregarAlCarrito(e) {
       }).showToast();
 
     const idBoton = e.currentTarget.id;
+    const selector = document.querySelector(`.producto-talles[data-producto="${idBoton}"]`);
+    const talleElegido = selector ? selector.value : "";
+    if (selector && !talleElegido) {
+      Toastify({
+        text: "Elegí un talle primero",
+        duration: 2500,
+        close: true,
+        gravity: "top",
+        position: "right"
+      }).showToast();
+      return;
+    }
+
     const productoAgregado = productos.find(producto => producto.id === idBoton);
 
-    if(productosEnCarrito.some(producto => producto.id === idBoton)) {
-        const index = productosEnCarrito.findIndex(producto => producto.id === idBoton);
+    const key = idBoton + "|" + talleElegido;
+
+    if (productosEnCarrito.some(producto => (producto.id + "|" + (producto.talle || "")) === key)) {
+        const index = productosEnCarrito.findIndex(producto => (producto.id + "|" + (producto.talle || "")) === key);
         productosEnCarrito[index].cantidad++;
     } else {
         productoAgregado.cantidad = 1;
+        productoAgregado.talle = talleElegido;
         productosEnCarrito.push(productoAgregado);
+
     }
 
     actualizarNumerito();

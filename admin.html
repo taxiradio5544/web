@@ -35,6 +35,9 @@
 
     <label>Título</label>
     <input id="titulo" placeholder="Ej: Malla cebra" />
+    <label>Talles (separados por coma)</label>
+    <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
+    <div class="hint">Separá con comas. Ej: S,M,L</div>
 
     <div class="row">
       <div>
@@ -146,6 +149,7 @@
 
         // 2) Guardar producto en Google Sheets (via Netlify Function)
         setMsg("Guardando producto...", "");
+        const talles = $("talles").value.trim();
         const payload = {
           categoria,
           titulo,
@@ -153,8 +157,10 @@
           precio_oferta,
           stock,
           activo,
+          talles,
           imagen: imagenFinal
         };
+
 
         console.log("Voy a guardar:", payload);
 
