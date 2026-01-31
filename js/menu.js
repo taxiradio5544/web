@@ -21,6 +21,12 @@ botonesCategorias.forEach(boton => boton.addEventListener("click", () => {
 }));
 
 function cargarProductos(productosElegidos) {
+    
+    if (!contenedorProductos) {
+      console.warn("menu.js: no existe #contenedor-productos en esta página");
+      return;
+    }
+    
     contenedorProductos.innerHTML = "";
 
     productosElegidos.forEach(producto => {
