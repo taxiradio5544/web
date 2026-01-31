@@ -125,9 +125,15 @@ exports.handler = async (event) => {
           id: id || "",
           titulo,
           precio: Number(precio),
+          precio_oferta: payload.precio_oferta ?? "",
+          stock: Number(payload.stock ?? 1),
           categoria: String(categoria).toLowerCase(),
+          talles: String(payload.talles || "").trim(),
+          stock_talles: String(payload.stock_talles || "").trim(),
           imagen,
-        },
+          activo: String(payload.activo || "si").trim(),
+        }
+
       }),
     });
 

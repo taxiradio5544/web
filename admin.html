@@ -39,6 +39,15 @@
     <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
     <div class="hint">Separá con comas. Ej: S,M,L</div>
 
+    <label>Talles</label>
+    <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
+    <div class="hint">Separalos con coma. Ej: S,M,L</div>
+
+    <label>Stock por talle (opcional)</label>
+    <input id="stock_talles" placeholder="Ej: S:2,M:0,L:5" />
+    <div class="hint">Formato: talle:stock separados por coma</div>
+
+
     <div class="row">
       <div>
         <label>Precio</label>
@@ -156,15 +165,17 @@
         // 2) Guardar producto en Google Sheets (via Netlify Function)
         setMsg("Guardando producto...", "");
         const talles = $("talles").value.trim();
+        const stock_talles = $("stock_talles").value.trim();
         const payload = {
           categoria,
           titulo,
           precio,
-          precio_oferta,
-          stock,
-          activo,
+          imagen: up.url,
           talles,
-          imagen: imagenFinal
+          stock_talles,
+          stock: 1,
+          activo: "si",
+          precio_oferta: ""
         };
 
 
