@@ -285,6 +285,10 @@
 
         <label>Título</label>
         <input id="titulo" placeholder="Ej: Malla cebra" />
+        
+        <label>Código de barras (ID)</label>
+        <input id="barcode" placeholder="Ej: 7730123456789" inputmode="numeric" />
+        <div class="hint">Este código se guarda como ID en Sheets y se usa en la tienda/carrito.</div>
 
         <div class="grid">
           <div>
@@ -412,6 +416,13 @@
       const precio_oferta = "";
       const stock = 1;
       const activo = "si";
+      const id = ($("barcode")?.value || "").trim().replace(/\s+/g, "");
+
+      if (!id) {
+        setMsg("Falta el código de barras (ID).", "err");
+        return;
+      }
+
 
       if (!adminToken || !categoria || !titulo || !file) {
         setMsg("Faltan datos (token, categoría, título o foto).", "err");
@@ -448,6 +459,7 @@
         setMsg("Guardando en Sheets…", "info");
 
         const payload = {
+          id,
           categoria,
           titulo,
           precio,
