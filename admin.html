@@ -35,6 +35,7 @@
 
     <label>Título</label>
     <input id="titulo" placeholder="Ej: Malla cebra" />
+
     <label>Talles (separados por coma)</label>
     <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
     <div class="hint">Separá con comas. Ej: S,M,L</div>
@@ -42,7 +43,6 @@
     <label>Stock por talle (opcional)</label>
     <input id="stock_talles" placeholder="Ej: S:2,M:0,L:5" />
     <div class="hint">Formato: talle:stock separados por coma</div>
-
 
     <div class="row">
       <div>
@@ -92,7 +92,7 @@
       catch { return { raw: text }; }
     }
 
-    // ✅ NUEVO: forzar JPG en URLs de Cloudinary (para que HEIC se vea en todos lados)
+    // ✅ forzar JPG en URLs de Cloudinary (para que HEIC se vea en todos lados)
     function cloudinaryToJpg(url) {
       if (!url) return url;
       if (!url.includes("res.cloudinary.com")) return url;
@@ -116,12 +116,13 @@
       const titulo = $("titulo").value.trim();
       const precio = Number($("precio").value || 0);
       const file = $("foto").files[0];
-          // ✅ defaults para campos nuevos (si todavía no agregaste inputs)
-    const precio_oferta = Number($("precio_oferta")?.value || 0) || "";
-    const stock = Number($("stock")?.value || 1) || 1;
-    const activo = ($("activo")?.value || "si").trim().toLowerCase();
-    const talles = ($("talles")?.value || "").trim();
 
+      // defaults (por si algún día agregás esos inputs)
+      const precio_oferta = Number($("precio_oferta")?.value || 0) || "";
+      const stock = Number($("stock")?.value || 1) || 1;
+      const activo = ($("activo")?.value || "si").trim().toLowerCase();
+      const talles = ($("talles")?.value || "").trim();
+      const stock_talles = ($("stock_talles")?.value || "").trim();
 
       if (!adminToken || !categoria || !titulo || !file) {
         setMsg("Faltan datos (token, categoría, título o foto).", "err");
@@ -152,7 +153,7 @@
           throw new Error("Upload falló: " + JSON.stringify(up.error || up));
         }
 
-        // ✅ NUEVO: usar URL transformada (JPG) para preview y para guardar en Sheets
+        // ✅ usar URL transformada (JPG) para preview y para guardar en Sheets
         const imagenFinal = cloudinaryToJpg(up.url);
 
         $("preview").src = imagenFinal;
@@ -160,20 +161,18 @@
 
         // 2) Guardar producto en Google Sheets (via Netlify Function)
         setMsg("Guardando producto...", "");
-        const talles = $("talles").value.trim();
-        const stock_talles = $("stock_talles").value.trim();
+
         const payload = {
           categoria,
           titulo,
           precio,
-          imagen: up.url,
+          imagen: imagenFinal,   <!-- ✅ ESTE era el bug -->
           talles,
           stock_talles,
-          stock: 1,
-          activo: "si",
-          precio_oferta: ""
+          stock,
+          activo,
+          precio_oferta
         };
-
 
         console.log("Voy a guardar:", payload);
 
@@ -199,6 +198,8 @@
         $("titulo").value = "";
         $("precio").value = "";
         $("foto").value = "";
+        $("talles").value = "";
+        $("stock_talles").value = "";
 
       } catch (err) {
         console.error(err);
