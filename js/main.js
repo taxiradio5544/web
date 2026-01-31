@@ -22,6 +22,18 @@ function parseStockTalles(str) {
   return map;
 }
 
+// ✅ helper: precio final (usa oferta si existe)
+function precioFinal(p) {
+  const po = Number(p.precio_oferta);
+  if (Number.isFinite(po) && po > 0) return po;
+  return Number(p.precio || 0);
+}
+
+// ✅ helper: clave única por (ID=código de barras + talle)
+function makeKey(id, talle) {
+  return `${String(id)}__${(talle || "").trim() || "SIN_TALLE"}`;
+}
+
 //script nuevo
 fetch("/.netlify/functions/get-products")
   .then(r => r.json())
@@ -47,8 +59,6 @@ const aside = document.querySelector("aside");
 const contenedorProductos = document.querySelector("#contenedor-productos");
 const botonesCategorias = document.querySelectorAll(".boton-categoria");
 const tituloPrincipal = document.querySelector("#titulo-principal");
-//const buscador = document.querySelector("#buscador");
-//const ordenar = document.querySelector("#ordenar");
 let botonesAgregar = document.querySelectorAll(".producto-agregar");
 const numerito = document.querySelector("#numerito");
 const buscador = document.querySelector("#buscador");
@@ -68,20 +78,18 @@ function render() {
   }
 
   // Ordenar (usa precio oferta si existe)
-  const precioFinal = (p) => {
-    const po = Number(p.precio_oferta);
-    if (Number.isFinite(po) && po > 0) return po;
-    return Number(p.precio || 0);
-  };
-
   if (modo === "menor") {
     lista.sort((a, b) => precioFinal(a) - precioFinal(b));
   } else if (modo === "mayor") {
     lista.sort((a, b) => precioFinal(b) - precioFinal(a));
   } else if (modo === "az") {
-    lista.sort((a, b) => String(a.titulo || "").localeCompare(String(b.titulo || ""), "es", { numeric: true, sensitivity: "base" }));
+    lista.sort((a, b) =>
+      String(a.titulo || "").localeCompare(String(b.titulo || ""), "es", { numeric: true, sensitivity: "base" })
+    );
   } else if (modo === "za") {
-    lista.sort((a, b) => String(b.titulo || "").localeCompare(String(a.titulo || ""), "es", { numeric: true, sensitivity: "base" }));
+    lista.sort((a, b) =>
+      String(b.titulo || "").localeCompare(String(a.titulo || ""), "es", { numeric: true, sensitivity: "base" })
+    );
   }
 
   cargarProductos(lista);
@@ -192,11 +200,6 @@ if (productosEnCarritoLS) {
   productosEnCarrito = [];
 }
 
-// ✅ helper: clave única por (ID=código de barras + talle)
-function makeKey(id, talle) {
-  return `${id}__${(talle || "").trim() || "SIN_TALLE"}`;
-}
-
 function agregarAlCarrito(e) {
   const idBoton = e.currentTarget.id; // ✅ este es tu código de barras
 
@@ -217,6 +220,26 @@ function agregarAlCarrito(e) {
     return;
   }
 
+  const productoBase = productos.find(p => String(p.id) === String(idBoton));
+  if (!productoBase) return;
+
+  // ✅ validar stock por talle si existe stock_talles
+  const stockMap = parseStockTalles(productoBase.stock_talles);
+  const usaPorTalle = Object.keys(stockMap).length > 0;
+  if (usaPorTalle && talleElegido) {
+    const st = Number(stockMap[talleElegido] ?? 0);
+    if (st <= 0) {
+      Toastify({
+        text: "Ese talle no tiene stock",
+        duration: 2500,
+        close: true,
+        gravity: "top",
+        position: "right"
+      }).showToast();
+      return;
+    }
+  }
+
   Toastify({
     text: "Producto agregado",
     duration: 3000,
@@ -234,24 +257,28 @@ function agregarAlCarrito(e) {
     onClick: function(){}
   }).showToast();
 
-  const productoBase = productos.find(p => String(p.id) === String(idBoton));
-  if (!productoBase) return;
-
   const key = makeKey(idBoton, talleElegido);
 
-  // ✅ NO mutar productoBase: crear copia
-  const item = {
-    ...productoBase,
-    talle: talleElegido || "",
-    _key: key
-  };
-
+  // ✅ buscar por key (id + talle)
   const idx = productosEnCarrito.findIndex(p => (p._key || makeKey(p.id, p.talle)) === key);
 
   if (idx !== -1) {
     productosEnCarrito[idx].cantidad = Number(productosEnCarrito[idx].cantidad || 0) + 1;
   } else {
-    item.cantidad = 1;
+    // ✅ NO mutar productoBase: crear copia + guardar talle + key + precio final
+    const item = {
+      ...productoBase,
+      talle: talleElegido || "",
+      _key: key,
+      cantidad: 1,
+      // precio unitario que se usa en carrito (si hay oferta, usa oferta)
+      precio: precioFinal(productoBase),
+      // preservo por si lo querés mostrar después
+      precio_original: Number(productoBase.precio || 0),
+      precio_oferta: productoBase.precio_oferta ?? "",
+      stock_talles: productoBase.stock_talles ?? "",
+    };
+
     productosEnCarrito.push(item);
   }
 
