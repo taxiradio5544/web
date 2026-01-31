@@ -175,6 +175,7 @@ function cargarProductos(productosElegidos) {
                 ${tallesHtml}
                 <button class="producto-agregar" id="${producto.id}">Agregar</button>
             </div>
+
         `;
 
         contenedorProductos.append(div);

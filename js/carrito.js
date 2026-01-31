@@ -32,6 +32,11 @@ function cargarProductosCarrito() {
                     <small>Título</small>
                     <h3>${producto.titulo}</h3>
                 </div>
+                <div class="carrito-producto-talle">
+                <small>Talle</small>
+                <p>${producto.talle ? producto.talle : "-"}</p>
+                </div>
+
                 <div class="carrito-producto-cantidad">
                     <small>Cantidad</small>
                     <p>${producto.cantidad}</p>
@@ -76,7 +81,7 @@ function actualizarBotonesEliminar() {
 }
 
 function eliminarDelCarrito(e) {
-    Toastify({
+  Toastify({
         text: "Producto eliminado",
         duration: 3000,
         close: true,
@@ -102,6 +107,7 @@ function eliminarDelCarrito(e) {
     localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
     cargarProductosCarrito();
 }
+
 
 botonVaciar.addEventListener("click", vaciarCarrito);
 
