@@ -120,10 +120,22 @@ function cargarProductos(productosElegidos) {
           .map(t => t.trim())
           .filter(Boolean);
 
+        const stockMap = parseStockTalles(producto.stock_talles);
+
+        // si hay stock_talles, usamos eso; si no, usamos stock general
+        const usarStockPorTalle = Object.keys(stockMap).length > 0;
+
+        const opciones = tallesArr.map(t => {
+          const st = usarStockPorTalle ? (stockMap[t] ?? 0) : Number(producto.stock ?? 0);
+          const disabled = st <= 0 ? "disabled" : "";
+          const label = usarStockPorTalle ? `${t} (stock: ${st})` : t;
+          return `<option value="${t}" ${disabled}>${label}</option>`;
+        }).join("");
+
         const tallesHtml = tallesArr.length
           ? `<select class="producto-talles" data-producto="${producto.id}">
               <option value="">Talle...</option>
-              ${tallesArr.map(t => `<option value="${t}">${t}</option>`).join("")}
+              ${opciones}
             </select>`
           : `<div class="muted" style="opacity:.75;font-size:12px">Sin talles</div>`;
 
@@ -138,6 +150,22 @@ function cargarProductos(productosElegidos) {
         const stockHtml = `<small style="opacity:.75">Stock: ${Number(producto.stock ?? 0)}</small>`;
         const div = document.createElement("div");
         div.classList.add("producto");
+        function parseStockTalles(str) {
+          // "S:2,M:0,L:5" => { S:2, M:0, L:5 }
+          const map = {};
+          String(str || "")
+            .split(",")
+            .map(s => s.trim())
+            .filter(Boolean)
+            .forEach(pair => {
+              const [k, v] = pair.split(":").map(x => x.trim());
+              if (!k) return;
+              const n = Number(v);
+              map[k] = Number.isFinite(n) ? n : 0;
+            });
+                return map;
+        }
+
         div.innerHTML = `
             <img class="producto-imagen" src="${producto.imagen}" alt="${producto.titulo}">
             <div class="producto-detalles">
