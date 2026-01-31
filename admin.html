@@ -4,72 +4,338 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vanocz Admin</title>
+
   <style>
-    body{font-family:system-ui;max-width:760px;margin:20px auto;padding:0 16px}
-    label{display:block;margin:12px 0 6px;font-weight:600}
-    input,select,button{width:100%;padding:10px;border-radius:12px;border:1px solid #ccc}
-    button{cursor:pointer;font-weight:800}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .ok{color:green;margin-top:10px}
-    .err{color:#b00020;margin-top:10px}
-    img{max-width:200px;border-radius:14px;margin-top:10px}
-    .card{border:1px solid #eee;border-radius:16px;padding:14px;margin-top:18px}
-    small{color:#666}
-    .hint{font-size:12px;color:#666;margin-top:6px}
+    :root{
+      --bg:#0b0b10;
+      --panel:#12121a;
+      --panel2:#0f0f17;
+      --text:#f2f2f7;
+      --muted:#b7b7c7;
+      --line:rgba(255,255,255,.10);
+      --ok:#36d399;
+      --err:#ff5c7a;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --r:18px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 15% -10%, rgba(120,92,233,.35), transparent 55%),
+        radial-gradient(700px 420px at 100% 0%, rgba(54,211,153,.16), transparent 55%),
+        radial-gradient(700px 420px at 0% 80%, rgba(255,92,122,.12), transparent 55%),
+        var(--bg);
+      min-height:100vh;
+      padding:28px 14px;
+    }
+
+    .wrap{
+      max-width: 920px;
+      margin: 0 auto;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:18px;
+    }
+
+    @media (max-width: 860px){
+      .wrap{grid-template-columns:1fr}
+    }
+
+    .top{
+      max-width: 920px;
+      margin: 0 auto 16px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size:28px;
+      letter-spacing:.2px;
+      line-height:1.1;
+    }
+
+    .sub{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .badge{
+      font-size:12px;
+      color:rgba(255,255,255,.8);
+      border:1px solid var(--line);
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      backdrop-filter: blur(8px);
+      white-space:nowrap;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card .head{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+
+    .card .head h2{
+      margin:0;
+      font-size:14px;
+      color:rgba(255,255,255,.85);
+      letter-spacing:.3px;
+      text-transform:uppercase;
+    }
+
+    .card .body{
+      padding:16px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 540px){
+      .grid{grid-template-columns:1fr}
+    }
+
+    label{
+      display:block;
+      font-weight:700;
+      font-size:12px;
+      color:rgba(255,255,255,.86);
+      margin:12px 0 6px;
+      letter-spacing:.2px;
+    }
+
+    .hint{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.25;
+    }
+
+    input, select, button{
+      width:100%;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding:12px 12px;
+      outline:none;
+      transition: .15s ease;
+      font-size:14px;
+    }
+
+    input::placeholder{color:rgba(255,255,255,.35)}
+    input:focus, select:focus{
+      border-color: rgba(120,92,233,.65);
+      box-shadow: 0 0 0 4px rgba(120,92,233,.18);
+    }
+
+    select{
+      appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(255,255,255,.7) 50%),
+        linear-gradient(135deg, rgba(255,255,255,.7) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 13px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+      padding-right:36px;
+    }
+
+    .btn{
+      margin-top:14px;
+      border:none;
+      cursor:pointer;
+      font-weight:900;
+      letter-spacing:.3px;
+      padding:12px 14px;
+      border-radius:16px;
+      background: linear-gradient(135deg, #785ce9, #4b33a8);
+      box-shadow: 0 12px 26px rgba(120,92,233,.28);
+    }
+    .btn:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    .msg{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.9);
+      font-size:13px;
+      line-height:1.35;
+      display:none;
+    }
+    .msg.ok{
+      display:block;
+      border-color: rgba(54,211,153,.35);
+      background: rgba(54,211,153,.08);
+    }
+    .msg.err{
+      display:block;
+      border-color: rgba(255,92,122,.35);
+      background: rgba(255,92,122,.10);
+    }
+    .msg.info{
+      display:block;
+    }
+
+    .previewBox{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 340px;
+      padding:16px;
+      background: rgba(255,255,255,.02);
+    }
+
+    .preview{
+      width:100%;
+      max-width: 420px;
+      border-radius: 18px;
+      border:1px solid var(--line);
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      display:none;
+    }
+
+    .mini{
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+      line-height:1.35;
+    }
+
+    .rowActions{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+    .ghost{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.85);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+    }
+    .ghost:hover{background: rgba(255,255,255,.06)}
   </style>
 </head>
+
 <body>
-  <h1>Vanocz Admin</h1>
-  <p><small>Sube foto (HEIC ok), guarda producto en Google Sheets, aparece en la tienda al refrescar.</small></p>
+  <div class="top">
+    <div>
+      <h1>Vanocz Admin</h1>
+      <div class="sub">Sube foto (HEIC ok), guarda producto en Google Sheets, aparece en la tienda al refrescar.</div>
+    </div>
+    <div class="badge">⚡ Cloudinary + Sheets</div>
+  </div>
 
-  <div class="card">
-    <label>Token Admin</label>
-    <input id="adminToken" type="password" placeholder="Contraseña" />
-
-    <label>Categoría</label>
-    <select id="categoria">
-      <option value="mallas">Mallas</option>
-      <option value="remeras">Remeras</option>
-      <option value="short">Shorts</option>
-    </select>
-
-    <label>Título</label>
-    <input id="titulo" placeholder="Ej: Malla cebra" />
-
-    <label>Talles (separados por coma)</label>
-    <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
-    <div class="hint">Separá con comas. Ej: S,M,L</div>
-
-    <label>Stock por talle (opcional)</label>
-    <input id="stock_talles" placeholder="Ej: S:2,M:0,L:5" />
-    <div class="hint">Formato: talle:stock separados por coma</div>
-
-    <div class="row">
-      <div>
-        <label>Precio</label>
-        <input id="precio" type="number" placeholder="1299" min="0" step="1" />
-        <div class="hint">Poné el precio sin $ (ej: 1299)</div>
+  <div class="wrap">
+    <!-- FORM -->
+    <div class="card">
+      <div class="head">
+        <h2>Cargar producto</h2>
       </div>
-      <div>
+      <div class="body">
+
+        <label>Token Admin</label>
+        <input id="adminToken" type="password" placeholder="Contraseña" />
+
+        <div class="grid">
+          <div>
+            <label>Categoría</label>
+            <select id="categoria">
+              <option value="mallas">Mallas</option>
+              <option value="remeras">Remeras</option>
+              <option value="short">Shorts</option>
+            </select>
+          </div>
+          <div>
+            <label>Precio</label>
+            <input id="precio" type="number" placeholder="1299" min="0" step="1" />
+            <div class="hint">Poné el precio sin $ (ej: 1299)</div>
+          </div>
+        </div>
+
+        <label>Título</label>
+        <input id="titulo" placeholder="Ej: Malla cebra" />
+
+        <div class="grid">
+          <div>
+            <label>Talles (coma)</label>
+            <input id="talles" placeholder="Ej: S,M,L o 36,38,40" />
+            <div class="hint">Separá con comas. Ej: S,M,L</div>
+          </div>
+          <div>
+            <label>Stock por talle (opcional)</label>
+            <input id="stock_talles" placeholder="Ej: S:2,M:0,L:5" />
+            <div class="hint">Formato: talle:stock separados por coma</div>
+          </div>
+        </div>
+
         <label>Foto</label>
         <input id="foto" type="file" accept="image/*" />
         <div class="hint">Se sube a Cloudinary y se guarda la URL en Sheets</div>
+
+        <button id="btn" class="btn" type="button">Subir y guardar</button>
+
+        <div class="rowActions">
+          <button class="ghost" id="btnLimpiar" type="button">Limpiar</button>
+          <button class="ghost" id="btnRefrescar" type="button">Abrir tienda</button>
+        </div>
+
+        <div id="msg" class="msg"></div>
       </div>
     </div>
 
-    <button id="btn" type="button">Subir y guardar</button>
-
-    <div id="msg"></div>
-    <img id="preview" style="display:none" />
+    <!-- PREVIEW -->
+    <div class="card">
+      <div class="head">
+        <h2>Preview</h2>
+      </div>
+      <div class="previewBox">
+        <div style="width:100%">
+          <img id="preview" class="preview" alt="Preview" />
+          <div id="emptyPreview" class="mini">Acá vas a ver la foto cuando se suba.<br/>Tip: HEIC se convierte a JPG automáticamente.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
 
-    function setMsg(text, kind = "") {
+    function setMsg(text, kind = "info") {
       const el = $("msg");
       el.textContent = text || "";
-      el.className = kind;
+      el.className = "msg " + (kind || "info");
+      el.style.display = text ? "block" : "none";
     }
 
     function setLoading(isLoading) {
@@ -92,24 +358,47 @@
       catch { return { raw: text }; }
     }
 
-    // ✅ forzar JPG en URLs de Cloudinary (para que HEIC se vea en todos lados)
+    // forzar JPG en URLs de Cloudinary (compatibilidad total)
     function cloudinaryToJpg(url) {
       if (!url) return url;
       if (!url.includes("res.cloudinary.com")) return url;
-
-      // Si ya tiene transformación f_..., no duplicamos
       if (url.includes("/image/upload/f_")) return url;
-
-      // Fuerza JPG (compatibilidad total)
       return url.replace("/image/upload/", "/image/upload/f_jpg/");
     }
 
-    console.log("admin.js cargado");
+    function showPreview(url){
+      const img = $("preview");
+      const empty = $("emptyPreview");
+      img.src = url;
+      img.style.display = "block";
+      empty.style.display = "none";
+    }
+    function clearPreview(){
+      const img = $("preview");
+      const empty = $("emptyPreview");
+      img.style.display = "none";
+      img.src = "";
+      empty.style.display = "block";
+    }
+
+    $("btnLimpiar").addEventListener("click", () => {
+      $("titulo").value = "";
+      $("precio").value = "";
+      $("foto").value = "";
+      $("talles").value = "";
+      $("stock_talles").value = "";
+      setMsg("");
+      clearPreview();
+    });
+
+    $("btnRefrescar").addEventListener("click", () => {
+      // Cambiá si tu tienda está en otra ruta
+      window.open("./", "_blank");
+    });
 
     $("btn").addEventListener("click", async (e) => {
       e.preventDefault();
       setMsg("");
-      $("preview").style.display = "none";
 
       const adminToken = $("adminToken").value.trim();
       const categoria = $("categoria").value.trim();
@@ -117,12 +406,12 @@
       const precio = Number($("precio").value || 0);
       const file = $("foto").files[0];
 
-      // defaults (por si algún día agregás esos inputs)
-      const precio_oferta = Number($("precio_oferta")?.value || 0) || "";
-      const stock = Number($("stock")?.value || 1) || 1;
-      const activo = ($("activo")?.value || "si").trim().toLowerCase();
       const talles = ($("talles")?.value || "").trim();
       const stock_talles = ($("stock_talles")?.value || "").trim();
+
+      const precio_oferta = "";
+      const stock = 1;
+      const activo = "si";
 
       if (!adminToken || !categoria || !titulo || !file) {
         setMsg("Faltan datos (token, categoría, título o foto).", "err");
@@ -136,8 +425,8 @@
       try {
         setLoading(true);
 
-        // 1) Subir imagen a Cloudinary (via Netlify Function)
-        setMsg("Subiendo imagen...", "");
+        // 1) Upload imagen
+        setMsg("Subiendo imagen…", "info");
         const fileBase64 = await fileToBase64(file);
 
         const upRes = await fetch("/.netlify/functions/upload-image", {
@@ -147,34 +436,28 @@
         });
 
         const up = await safeJson(upRes);
-        console.log("upload status", upRes.status, up);
 
         if (!upRes.ok || !up.ok || !up.url) {
           throw new Error("Upload falló: " + JSON.stringify(up.error || up));
         }
 
-        // ✅ usar URL transformada (JPG) para preview y para guardar en Sheets
         const imagenFinal = cloudinaryToJpg(up.url);
+        showPreview(imagenFinal);
 
-        $("preview").src = imagenFinal;
-        $("preview").style.display = "block";
-
-        // 2) Guardar producto en Google Sheets (via Netlify Function)
-        setMsg("Guardando producto...", "");
+        // 2) Save a Sheets
+        setMsg("Guardando en Sheets…", "info");
 
         const payload = {
           categoria,
           titulo,
           precio,
-          imagen: imagenFinal,   <!-- ✅ ESTE era el bug -->
+          imagen: imagenFinal,
           talles,
           stock_talles,
           stock,
           activo,
           precio_oferta
         };
-
-        console.log("Voy a guardar:", payload);
 
         const saveRes = await fetch("/.netlify/functions/create-products", {
           method: "POST",
@@ -186,7 +469,6 @@
         });
 
         const save = await safeJson(saveRes);
-        console.log("save status", saveRes.status, save);
 
         if (!saveRes.ok || !save.ok) {
           throw new Error("Save falló: " + JSON.stringify(save.error || save.details || save));
@@ -194,7 +476,7 @@
 
         setMsg("✅ Guardado. Refrescá la tienda para verlo.", "ok");
 
-        // limpiar campos (mantengo token y categoría por comodidad)
+        // limpiar campos (mantengo token y categoría)
         $("titulo").value = "";
         $("precio").value = "";
         $("foto").value = "";
