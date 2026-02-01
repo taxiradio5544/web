@@ -107,22 +107,35 @@
     });
   }
 
-  function eliminarDelCarrito(e) {
+    function eliminarDelCarrito(e) {
     Toastify({
-      text: "Producto eliminado",
-      duration: 3000,
-      close: true,
-      gravity: "top",
-      position: "right",
-      stopOnFocus: true,
-      style: {
+        text: "Producto eliminado",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
         background: "linear-gradient(to right, #111111, #6b6b6b)",
         borderRadius: "2rem",
         textTransform: "uppercase",
         fontSize: ".75rem"
-      },
-      offset: { x: "1.5rem", y: "1.5rem" }
+        },
+        offset: { x: "1.5rem", y: "1.5rem" }
     }).showToast();
+
+    const key = e.currentTarget.dataset.key; // ✅ producto + talle
+
+    const index = productosEnCarrito.findIndex(p => (p._key || (p.id + "__" + (p.talle || "SIN_TALLE"))) === key);
+
+    if (index !== -1) {
+        productosEnCarrito.splice(index, 1);
+    }
+
+    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+    cargarProductosCarrito();
+    }
+
 
     const key = e.currentTarget.dataset.key;
     const index = productosEnCarrito.findIndex(p => (p._key || makeKey(p.id, p.talle)) === key);

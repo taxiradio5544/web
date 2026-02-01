@@ -153,6 +153,8 @@ function cargarProductos(productosElegidos) {
         ${stockHtml}
         ${tallesHtml}
         <button class="producto-agregar" id="${producto.id}">Agregar</button>
+        <button class="carrito-producto-eliminar" data-key="${producto._key || (producto.id + '__' + (producto.talle || 'SIN_TALLE'))}">
+
       </div>
     `;
 
