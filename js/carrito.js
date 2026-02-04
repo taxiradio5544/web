@@ -51,6 +51,38 @@
     if (numeritoFloat) numeritoFloat.innerText = totalCant;
   }
 
+  function toast(text, isErr = false) {
+    if (typeof Toastify === "function") {
+      Toastify({
+        text,
+        duration: 2600,
+        close: true,
+        gravity: "top",
+        position: "right",
+        style: isErr
+          ? { background: "linear-gradient(to right, #b00020, #ff4d6d)" }
+          : undefined
+      }).showToast();
+    }
+  }
+
+  // Stock disponible para un producto + talle
+  function stockDisponibleDe(p, talle) {
+    if (!p) return 0;
+
+    const stockMap = parseStockTalles(p.stock_talles);
+    const usarStockPorTalle = Object.keys(stockMap).length > 0;
+
+    if (usarStockPorTalle) {
+      const t = String(talle || "").trim();
+      return Number(stockMap[t] ?? 0);
+    }
+
+    // stock general: si está vacío/null => 999 (como venías usando)
+    const stockGeneral = (p.stock === "" || p.stock == null) ? 999 : Number(p.stock);
+    return Number.isFinite(stockGeneral) ? stockGeneral : 0;
+  }
+
   // =========================
   // DOM
   // =========================
@@ -72,80 +104,96 @@
   // Estado
   // =========================
   let productosEnCarrito = loadCart();
+  updateBadges(productosEnCarrito);
+
+  // Productos reales (de Sheets)
+  let productosReales = [];
+  let mapById = new Map();
+
+  // =========================
+  // UI: Loading sin parpadeo
+  // =========================
+  function setLoadingUI(isLoading) {
+    if (isLoading) {
+      // en loading: oculto todo y muestro "cargando"
+      contenedorCarritoVacio.classList.remove("disabled");
+      contenedorCarritoVacio.innerText = "Cargando carrito...";
+      contenedorCarritoProductos.classList.add("disabled");
+      contenedorCarritoAcciones.classList.add("disabled");
+      contenedorCarritoComprado.classList.add("disabled");
+    } else {
+      contenedorCarritoVacio.innerText = "Tu carrito está vacío.";
+    }
+  }
 
   // =========================
   // Sync con productos reales (Sheets)
-  // - Si borraste todo del Sheet, limpia carrito automáticamente
-  // - Marca items sin stock (por talle si hay stock_talles)
+  // - Limpia si no hay productos en sheets
+  // - Actualiza info (precio, imagen, etc)
+  // - Ajusta cantidad si excede stock
   // =========================
-  async function syncWithProducts() {
-    try {
-      const res = await fetch("/.netlify/functions/get-products");
-      const data = await res.json();
-      const productos = data.products || [];
+  async function fetchProductos() {
+    const res = await fetch("/.netlify/functions/get-products");
+    const data = await res.json();
+    productosReales = data.products || [];
+    mapById = new Map(productosReales.map(p => [String(p.id), p]));
+  }
 
-      const mapById = new Map(productos.map(p => [String(p.id), p]));
-
-      // Si no hay productos en la tienda (vos borraste todo), limpio el carrito
-      if (productos.length === 0) {
-        productosEnCarrito = [];
-        saveCart(productosEnCarrito);
-        updateBadges(productosEnCarrito);
-        return;
-      }
-
-      // Reemplazo detalles del producto por los actuales (precio, imagen, etc),
-      // y marco stockOk / stockDisponible
-      productosEnCarrito = productosEnCarrito
-        .map(item => {
-          const id = String(item.id);
-          const talle = String(item.talle || "").trim();
-          const key = item._key || makeKey(id, talle);
-
-          const p = mapById.get(id);
-          if (!p) return null; // producto ya no existe => lo saco
-
-          // stock por talle o general
-          const stockMap = parseStockTalles(p.stock_talles);
-          const usarStockPorTalle = Object.keys(stockMap).length > 0;
-
-          let stockDisponible;
-          if (usarStockPorTalle) {
-            stockDisponible = Number(stockMap[talle] ?? 0);
-          } else {
-            const stockGeneral = (p.stock === "" || p.stock == null) ? 999 : Number(p.stock);
-            stockDisponible = Number.isFinite(stockGeneral) ? stockGeneral : 0;
-          }
-
-          const stockOk = stockDisponible > 0;
-
-          return {
-            ...item,
-            // refresco campos desde producto real
-            titulo: p.titulo,
-            imagen: p.imagen,
-            precio: p.precio,
-            precio_oferta: p.precio_oferta,
-            activo: p.activo,
-            stock: p.stock,
-            talles: p.talles,
-            stock_talles: p.stock_talles,
-            // clave estable
-            _key: key,
-            // flags para UI
-            _stockDisponible: stockDisponible,
-            _stockOk: stockOk
-          };
-        })
-        .filter(Boolean);
-
+  function syncCartWithProducts() {
+    // si borraste todo en sheets, limpio carrito
+    if (productosReales.length === 0) {
+      productosEnCarrito = [];
       saveCart(productosEnCarrito);
       updateBadges(productosEnCarrito);
-    } catch (err) {
-      console.warn("carrito.js: no se pudo sincronizar con productos. Uso lo que hay en localStorage.", err);
-      // igual actualizo badge
-      updateBadges(productosEnCarrito);
+      return;
     }
+
+    let huboAjustes = false;
+
+    productosEnCarrito = productosEnCarrito
+      .map(item => {
+        const id = String(item.id);
+        const talle = String(item.talle || "").trim();
+        const key = item._key || makeKey(id, talle);
+
+        const p = mapById.get(id);
+        if (!p) return null; // producto ya no existe => afuera
+
+        const stockDisp = stockDisponibleDe(p, talle);
+        const cant = Number(item.cantidad || 0);
+
+        // si excede stock, recorto
+        let nuevaCant = cant;
+        if (stockDisp >= 0 && cant > stockDisp) {
+          nuevaCant = Math.max(0, stockDisp);
+          huboAjustes = true;
+        }
+
+        return {
+          ...item,
+          // refresco desde producto real
+          titulo: p.titulo,
+          imagen: p.imagen,
+          precio: p.precio,
+          precio_oferta: p.precio_oferta,
+          activo: p.activo,
+          stock: p.stock,
+          talles: p.talles,
+          stock_talles: p.stock_talles,
+          _key: key,
+          cantidad: nuevaCant,
+          _stockDisponible: stockDisp
+        };
+      })
+      .filter(Boolean)
+      .filter(it => Number(it.cantidad || 0) > 0); // si quedó en 0 => lo saco
+
+    if (huboAjustes) {
+      toast("Ajusté cantidades por stock disponible.", true);
+    }
+
+    saveCart(productosEnCarrito);
+    updateBadges(productosEnCarrito);
   }
 
   // =========================
@@ -193,10 +241,12 @@
       const cantidad = Number(producto.cantidad || 0);
       const subtotal = pf * cantidad;
 
-      const sinStock = producto._stockOk === false; // si sync lo marcó
+      const stockDisp = Number(producto._stockDisponible ?? 0);
+      const sinStock = stockDisp <= 0;
+
       const stockTag = sinStock
         ? `<small style="color:#b00020;font-weight:700">SIN STOCK</small>`
-        : ``;
+        : `<small style="opacity:.75">Stock: ${stockDisp}</small>`;
 
       const talleTxt = String(producto.talle || "").trim() || "-";
 
@@ -255,14 +305,7 @@
     const key = e.currentTarget?.dataset?.key;
     if (!key) return;
 
-    Toastify({
-      text: "Producto eliminado",
-      duration: 2500,
-      close: true,
-      gravity: "top",
-      position: "right",
-      stopOnFocus: true
-    }).showToast();
+    toast("Producto eliminado");
 
     productosEnCarrito = productosEnCarrito.filter(p => (p._key || makeKey(p.id, p.talle)) !== key);
     saveCart(productosEnCarrito);
@@ -293,7 +336,7 @@
   });
 
   // =========================
-  // Comprar
+  // Comprar (bloquea si hay sin stock)
   // =========================
   botonComprar?.addEventListener("click", () => {
     if (!productosEnCarrito || productosEnCarrito.length === 0) {
@@ -301,7 +344,7 @@
       return;
     }
 
-    const haySinStock = productosEnCarrito.some(p => p._stockOk === false);
+    const haySinStock = productosEnCarrito.some(p => Number(p._stockDisponible ?? 0) <= 0);
     if (haySinStock) {
       Swal.fire({
         title: "Hay productos sin stock",
@@ -311,7 +354,7 @@
       return;
     }
 
-    // Acá después lo conectamos con MercadoPago (por ahora simulamos compra)
+    // (Más adelante conectamos MercadoPago)
     productosEnCarrito = [];
     saveCart(productosEnCarrito);
     updateBadges(productosEnCarrito);
@@ -324,11 +367,29 @@
   });
 
   // =========================
+  // IMPORTANTE:
+  // Control de stock al agregar desde la tienda:
+  // El carrito no puede interceptar ese click si es otra página,
+  // pero al sincronizar acá ya recorta cantidades si exceden.
+  // =========================
+
+  // =========================
   // Init
   // =========================
   (async () => {
-    updateBadges(productosEnCarrito);
-    await syncWithProducts();
+    setLoadingUI(true);
+
+    // Primero traigo productos reales
+    try {
+      await fetchProductos();
+      syncCartWithProducts();
+    } catch (err) {
+      console.warn("carrito.js: fallo fetch productos", err);
+      // igual seguimos con el carrito local
+      updateBadges(productosEnCarrito);
+    }
+
+    setLoadingUI(false);
     cargarProductosCarrito();
   })();
 })();
