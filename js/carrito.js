@@ -6,6 +6,12 @@
     return `${String(id)}__${(talle || "").trim() || "SIN_TALLE"}`;
   }
 
+  function getPrecioFinal(producto) {
+    const po = Number(producto.precio_oferta);
+    if (Number.isFinite(po) && po > 0) return po;
+    return Number(producto.precio || 0);
+  }
+
   // =========================
   // Estado
   // =========================
@@ -34,15 +40,16 @@
   // =========================
   function cargarProductosCarrito() {
     if (productosEnCarrito && productosEnCarrito.length > 0) {
-      contenedorCarritoVacio.classList.add("disabled");
-      contenedorCarritoProductos.classList.remove("disabled");
-      contenedorCarritoAcciones.classList.remove("disabled");
-      contenedorCarritoComprado.classList.add("disabled");
+      contenedorCarritoVacio?.classList.add("disabled");
+      contenedorCarritoProductos?.classList.remove("disabled");
+      contenedorCarritoAcciones?.classList.remove("disabled");
+      contenedorCarritoComprado?.classList.add("disabled");
 
-      contenedorCarritoProductos.innerHTML = "";
+      if (contenedorCarritoProductos) contenedorCarritoProductos.innerHTML = "";
 
       productosEnCarrito.forEach(producto => {
         const key = producto._key || makeKey(producto.id, producto.talle);
+        const precioFinal = getPrecioFinal(producto);
 
         const div = document.createElement("div");
         div.classList.add("carrito-producto");
@@ -60,17 +67,17 @@
 
           <div class="carrito-producto-cantidad">
             <small>Cantidad</small>
-            <p>${producto.cantidad}</p>
+            <p>${Number(producto.cantidad || 0)}</p>
           </div>
 
           <div class="carrito-producto-precio">
             <small>Precio</small>
-            <p>$${Number(producto.precio || 0)}</p>
+            <p>$${precioFinal}</p>
           </div>
 
           <div class="carrito-producto-subtotal carrito-producto-subtotal">
             <small>Subtotal</small>
-            <p>$${Number(producto.precio || 0) * Number(producto.cantidad || 0)}</p>
+            <p>$${precioFinal * Number(producto.cantidad || 0)}</p>
           </div>
 
           <button class="carrito-producto-eliminar" data-key="${key}" aria-label="Eliminar">
@@ -78,17 +85,17 @@
           </button>
         `;
 
-        contenedorCarritoProductos.append(div);
+        contenedorCarritoProductos?.append(div);
       });
 
       actualizarBotonesEliminar();
       actualizarTotal();
       actualizarNumeritoCarrito();
     } else {
-      contenedorCarritoVacio.classList.remove("disabled");
-      contenedorCarritoProductos.classList.add("disabled");
-      contenedorCarritoAcciones.classList.add("disabled");
-      contenedorCarritoComprado.classList.add("disabled");
+      contenedorCarritoVacio?.classList.remove("disabled");
+      contenedorCarritoProductos?.classList.add("disabled");
+      contenedorCarritoAcciones?.classList.add("disabled");
+      contenedorCarritoComprado?.classList.add("disabled");
 
       actualizarNumeritoCarrito();
       if (totalEl) totalEl.innerText = "$0";
@@ -107,35 +114,22 @@
     });
   }
 
-    function eliminarDelCarrito(e) {
+  function eliminarDelCarrito(e) {
     Toastify({
-        text: "Producto eliminado",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        stopOnFocus: true,
-        style: {
+      text: "Producto eliminado",
+      duration: 3000,
+      close: true,
+      gravity: "top",
+      position: "right",
+      stopOnFocus: true,
+      style: {
         background: "linear-gradient(to right, #111111, #6b6b6b)",
         borderRadius: "2rem",
         textTransform: "uppercase",
         fontSize: ".75rem"
-        },
-        offset: { x: "1.5rem", y: "1.5rem" }
+      },
+      offset: { x: "1.5rem", y: "1.5rem" }
     }).showToast();
-
-    const key = e.currentTarget.dataset.key; // ✅ producto + talle
-
-    const index = productosEnCarrito.findIndex(p => (p._key || (p.id + "__" + (p.talle || "SIN_TALLE"))) === key);
-
-    if (index !== -1) {
-        productosEnCarrito.splice(index, 1);
-    }
-
-    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
-    cargarProductosCarrito();
-    }
-
 
     const key = e.currentTarget.dataset.key;
     const index = productosEnCarrito.findIndex(p => (p._key || makeKey(p.id, p.talle)) === key);
@@ -178,7 +172,7 @@
   // =========================
   function actualizarTotal() {
     const totalCalculado = productosEnCarrito.reduce(
-      (acc, producto) => acc + (Number(producto.precio || 0) * Number(producto.cantidad || 0)),
+      (acc, producto) => acc + (getPrecioFinal(producto) * Number(producto.cantidad || 0)),
       0
     );
     if (totalEl) totalEl.innerText = `$${totalCalculado}`;
@@ -190,10 +184,10 @@
     productosEnCarrito = [];
     localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
 
-    contenedorCarritoVacio.classList.add("disabled");
-    contenedorCarritoProductos.classList.add("disabled");
-    contenedorCarritoAcciones.classList.add("disabled");
-    contenedorCarritoComprado.classList.remove("disabled");
+    contenedorCarritoVacio?.classList.add("disabled");
+    contenedorCarritoProductos?.classList.add("disabled");
+    contenedorCarritoAcciones?.classList.add("disabled");
+    contenedorCarritoComprado?.classList.remove("disabled");
 
     actualizarNumeritoCarrito();
     if (totalEl) totalEl.innerText = "$0";
