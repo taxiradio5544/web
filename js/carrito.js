@@ -335,26 +335,50 @@
     });
   });
 
-  // =========================
-  // Comprar (bloquea si hay sin stock)
-  // =========================
-  botonComprar?.addEventListener("click", () => {
-    if (!productosEnCarrito || productosEnCarrito.length === 0) {
-      setVistaVacia();
+// =========================
+// Comprar (con descuento real de stock)
+// =========================
+botonComprar?.addEventListener("click", comprarCarrito);
+
+async function comprarCarrito() {
+  if (!productosEnCarrito || productosEnCarrito.length === 0) {
+    setVistaVacia();
+    return;
+  }
+
+  const haySinStock = productosEnCarrito.some(p => Number(p._stockDisponible ?? 0) <= 0);
+  if (haySinStock) {
+    Swal.fire({
+      title: "Hay productos sin stock",
+      icon: "warning",
+      text: "Eliminá los que dicen SIN STOCK para poder continuar."
+    });
+    return;
+  }
+
+  try {
+    // armo payload para backend
+    const items = productosEnCarrito.map(p => ({
+      id: String(p.id || ""),
+      talle: String(p.talle || "").trim(),
+      cantidad: Number(p.cantidad || 0)
+    }));
+
+    const res = await fetch("/.netlify/functions/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      const msg = data?.details?.error || data?.error || "No se pudo completar la compra";
+      Swal.fire({ icon: "error", title: "Error", text: msg });
       return;
     }
 
-    const haySinStock = productosEnCarrito.some(p => Number(p._stockDisponible ?? 0) <= 0);
-    if (haySinStock) {
-      Swal.fire({
-        title: "Hay productos sin stock",
-        icon: "warning",
-        text: "Eliminá los que dicen SIN STOCK para poder continuar."
-      });
-      return;
-    }
-
-    // (Más adelante conectamos MercadoPago)
+    // éxito → vaciar carrito
     productosEnCarrito = [];
     saveCart(productosEnCarrito);
     updateBadges(productosEnCarrito);
@@ -364,7 +388,23 @@
     contenedorCarritoAcciones.classList.add("disabled");
     contenedorCarritoComprado.classList.remove("disabled");
     if (totalEl) totalEl.innerText = "$0";
-  });
+
+    Swal.fire({
+      icon: "success",
+      title: "Compra realizada",
+      text: "El stock se actualizó automáticamente"
+    });
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudo conectar con el servidor"
+    });
+  }
+}
+
 
   // =========================
   // IMPORTANTE:

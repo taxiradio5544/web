@@ -199,7 +199,9 @@ function cargarProductos(productosElegidos) {
     const opciones = tallesArr.map(t => {
       const st = usarStockPorTalle ? (stockMap[t] ?? 0) : Number(producto.stock ?? 0);
       const disabled = st <= 0 ? "disabled" : "";
-      const label = usarStockPorTalle ? `${t} (stock: ${st})` : t;
+      const lowMsg = (Number.isFinite(st) && st > 0 && st <= 2) ? ` • Quedan solo ${st}` : "";
+      const label = usarStockPorTalle ? `${t} (stock: ${st}${lowMsg})` : t;
+
       return `<option value="${t}" ${disabled}>${label}</option>`;
     }).join("");
 
