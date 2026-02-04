@@ -34,6 +34,57 @@ function makeKey(id, talle) {
   const t = String(talle || "").trim();
   return `${String(id)}__${t || "SIN_TALLE"}`;
 }
+function readCarrito() {
+  try {
+    const raw = localStorage.getItem("productos-en-carrito");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCarrito(items) {
+  localStorage.setItem("productos-en-carrito", JSON.stringify(items || []));
+}
+
+// ✅ elimina del carrito lo que ya no existe en la tienda / o lo que ya no tiene stock del talle
+function syncCarritoConCatalogo(catalogo) {
+  const carrito = readCarrito();
+  if (!carrito.length) {
+    // igual actualizamos numerito por si quedó raro
+    try { if (typeof actualizarNumerito === "function") actualizarNumerito(); } catch {}
+    return;
+  }
+
+  const mapById = new Map(catalogo.map(p => [String(p.id), p]));
+
+  const limpio = carrito.filter(item => {
+    const id = String(item.id);
+    const prod = mapById.get(id);
+    if (!prod) return false;
+
+    // si el item tiene talle, validar stock del talle si existe stock_talles
+    const talle = String(item.talle || "").trim();
+    if (talle) {
+      const stockMap = parseStockTalles(prod.stock_talles);
+      if (Object.keys(stockMap).length > 0) {
+        const st = Number(stockMap[talle] ?? 0);
+        return st > 0;
+      }
+    }
+
+    // si no hay talle o no hay stock_talles, validar stock general (si existe)
+    const stockGeneral = (prod.stock === "" || prod.stock == null) ? 999 : Number(prod.stock);
+    return Number.isFinite(stockGeneral) && stockGeneral > 0;
+  });
+
+  if (limpio.length !== carrito.length) {
+    writeCarrito(limpio);
+  }
+
+  // ✅ actualizar numerito del menú si existe
+  try { if (typeof actualizarNumerito === "function") actualizarNumerito(); } catch {}
+}
 
 // ✅ parse seguro localStorage (evita “carrito vacío” por JSON roto)
 function readCart() {
@@ -60,16 +111,20 @@ fetch("/.netlify/functions/get-products")
     productos = arr.filter(p => {
       const activo = String((p.activo ?? "si")).trim().toLowerCase();
 
-      // ✅ stock vacío o null => lo tomamos como "hay stock" para no borrar productos viejos
+      // stock vacío => lo tomamos como "hay stock" para no borrar productos viejos
       const stock = (p.stock === "" || p.stock == null) ? 999 : Number(p.stock);
 
       return activo === "si" && Number.isFinite(stock) && stock > 0;
     });
 
+    // ✅ limpiar carrito: sacar items que ya no existen en productos (o sin stock del talle)
+    syncCarritoConCatalogo(productos);
+
     productosBase = productos.slice();
     render();
   })
   .catch(err => console.error("Error cargando productos:", err));
+
 
 // =======================
 // DOM
