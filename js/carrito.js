@@ -1,203 +1,298 @@
-(() => {
-  // =========================
-  // Helpers
-  // =========================
-  function makeKey(id, talle) {
-    return `${String(id)}__${(talle || "").trim() || "SIN_TALLE"}`;
-  }
+// =======================
+// Estado productos
+// =======================
+let productos = [];
+let productosBase = [];
 
-  function getPrecioFinal(producto) {
-    const po = Number(producto.precio_oferta);
-    if (Number.isFinite(po) && po > 0) return po;
-    return Number(producto.precio || 0);
-  }
-
-  // =========================
-  // Estado
-  // =========================
-  let productosEnCarrito = localStorage.getItem("productos-en-carrito");
-  productosEnCarrito = productosEnCarrito ? JSON.parse(productosEnCarrito) : [];
-
-  // =========================
-  // DOM
-  // =========================
-  const contenedorCarritoVacio = document.querySelector("#carrito-vacio");
-  const contenedorCarritoProductos = document.querySelector("#carrito-productos");
-  const contenedorCarritoAcciones = document.querySelector("#carrito-acciones");
-  const contenedorCarritoComprado = document.querySelector("#carrito-comprado");
-
-  const botonVaciar = document.querySelector("#carrito-acciones-vaciar");
-  const totalEl = document.querySelector("#total");
-  const botonComprar = document.querySelector("#carrito-acciones-comprar");
-
-  // OJO: para no chocar con otros scripts, lo llamo distinto
-  const numeritoEl = document.querySelector("#numerito");
-
-  let botonesEliminar = document.querySelectorAll(".carrito-producto-eliminar");
-
-  // =========================
-  // Render
-  // =========================
-  function cargarProductosCarrito() {
-    if (productosEnCarrito && productosEnCarrito.length > 0) {
-      contenedorCarritoVacio?.classList.add("disabled");
-      contenedorCarritoProductos?.classList.remove("disabled");
-      contenedorCarritoAcciones?.classList.remove("disabled");
-      contenedorCarritoComprado?.classList.add("disabled");
-
-      if (contenedorCarritoProductos) contenedorCarritoProductos.innerHTML = "";
-
-      productosEnCarrito.forEach(producto => {
-        const key = producto._key || makeKey(producto.id, producto.talle);
-        const precioFinal = getPrecioFinal(producto);
-
-        const div = document.createElement("div");
-        div.classList.add("carrito-producto");
-        div.innerHTML = `
-          <img class="carrito-producto-imagen" src="${producto.imagen}" alt="${producto.titulo}">
-          <div class="carrito-producto-titulo">
-            <small>Título</small>
-            <h3>${producto.titulo}</h3>
-          </div>
-
-          <div class="carrito-producto-talle">
-            <small>Talle</small>
-            <p>${producto.talle ? producto.talle : "-"}</p>
-          </div>
-
-          <div class="carrito-producto-cantidad">
-            <small>Cantidad</small>
-            <p>${Number(producto.cantidad || 0)}</p>
-          </div>
-
-          <div class="carrito-producto-precio">
-            <small>Precio</small>
-            <p>$${precioFinal}</p>
-          </div>
-
-          <div class="carrito-producto-subtotal carrito-producto-subtotal">
-            <small>Subtotal</small>
-            <p>$${precioFinal * Number(producto.cantidad || 0)}</p>
-          </div>
-
-          <button class="carrito-producto-eliminar" data-key="${key}" aria-label="Eliminar">
-            <i class="bi bi-trash-fill"></i>
-          </button>
-        `;
-
-        contenedorCarritoProductos?.append(div);
-      });
-
-      actualizarBotonesEliminar();
-      actualizarTotal();
-      actualizarNumeritoCarrito();
-    } else {
-      contenedorCarritoVacio?.classList.remove("disabled");
-      contenedorCarritoProductos?.classList.add("disabled");
-      contenedorCarritoAcciones?.classList.add("disabled");
-      contenedorCarritoComprado?.classList.add("disabled");
-
-      actualizarNumeritoCarrito();
-      if (totalEl) totalEl.innerText = "$0";
-    }
-  }
-
-  cargarProductosCarrito();
-
-  // =========================
-  // Eliminar
-  // =========================
-  function actualizarBotonesEliminar() {
-    botonesEliminar = document.querySelectorAll(".carrito-producto-eliminar");
-    botonesEliminar.forEach(boton => {
-      boton.addEventListener("click", eliminarDelCarrito);
+// =======================
+// Helpers
+// =======================
+function parseStockTalles(str) {
+  // "S:2,M:0,L:5" => { S:2, M:0, L:5 }
+  const map = {};
+  String(str || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
+    .forEach(pair => {
+      const [k, v] = pair.split(":").map(x => x.trim());
+      if (!k) return;
+      const n = Number(v);
+      map[k] = Number.isFinite(n) ? n : 0;
     });
+  return map;
+}
+
+function precioFinal(p) {
+  const po = Number(p?.precio_oferta);
+  if (Number.isFinite(po) && po > 0) return po;
+  return Number(p?.precio || 0);
+}
+
+// ✅ clave única por (código de barras + talle)
+function makeKey(id, talle) {
+  const t = String(talle || "").trim();
+  return `${String(id)}__${t || "SIN_TALLE"}`;
+}
+
+// =======================
+// Fetch productos (Netlify function)
+// =======================
+fetch("/.netlify/functions/get-products")
+  .then(r => r.json())
+  .then(data => {
+    const arr = data.products || [];
+
+    productos = arr.filter(p => {
+      const activo = String((p.activo ?? "si")).trim().toLowerCase();
+
+      // ✅ stock vacío o null => lo tomamos como "hay stock" para no borrar productos viejos
+      const stock = (p.stock === "" || p.stock == null) ? 999 : Number(p.stock);
+
+      return activo === "si" && Number.isFinite(stock) && stock > 0;
+    });
+
+    productosBase = productos.slice();
+    render();
+  })
+  .catch(err => console.error("Error cargando productos:", err));
+
+// =======================
+// DOM
+// =======================
+const aside = document.querySelector("aside");
+const contenedorProductos = document.querySelector("#contenedor-productos");
+const botonesCategorias = document.querySelectorAll(".boton-categoria");
+const tituloPrincipal = document.querySelector("#titulo-principal");
+let botonesAgregar = document.querySelectorAll(".producto-agregar");
+const numerito = document.querySelector("#numerito");
+const buscador = document.querySelector("#buscador");
+const ordenar = document.querySelector("#ordenar");
+
+// =======================
+// Render principal (buscador + ordenar + cargarProductos)
+// =======================
+function render() {
+  const texto = (buscador?.value || "").trim().toLowerCase();
+  const modo = (ordenar?.value || "relevancia").trim().toLowerCase();
+
+  let lista = productosBase.slice();
+
+  // Buscar
+  if (texto) {
+    lista = lista.filter(p => String(p.titulo || "").toLowerCase().includes(texto));
   }
 
-  function eliminarDelCarrito(e) {
+  // Ordenar (usa precio oferta si existe)
+  if (modo === "menor") {
+    lista.sort((a, b) => precioFinal(a) - precioFinal(b));
+  } else if (modo === "mayor") {
+    lista.sort((a, b) => precioFinal(b) - precioFinal(a));
+  } else if (modo === "az") {
+    lista.sort((a, b) =>
+      String(a.titulo || "").localeCompare(String(b.titulo || ""), "es", { numeric: true, sensitivity: "base" })
+    );
+  } else if (modo === "za") {
+    lista.sort((a, b) =>
+      String(b.titulo || "").localeCompare(String(a.titulo || ""), "es", { numeric: true, sensitivity: "base" })
+    );
+  }
+
+  cargarProductos(lista);
+}
+
+// Eventos toolbar
+buscador?.addEventListener("input", render);
+ordenar?.addEventListener("change", render);
+
+// cerrar aside al click en categorías (mobile)
+botonesCategorias.forEach(boton =>
+  boton.addEventListener("click", () => aside?.classList.remove("aside-visible"))
+);
+
+// =======================
+// Cargar productos al DOM
+// =======================
+function cargarProductos(productosElegidos) {
+  if (!contenedorProductos) return;
+
+  contenedorProductos.innerHTML = "";
+
+  productosElegidos.forEach(producto => {
+    const tallesArr = String(producto.talles || "")
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    const stockMap = parseStockTalles(producto.stock_talles);
+    const usarStockPorTalle = Object.keys(stockMap).length > 0;
+
+    const opciones = tallesArr.map(t => {
+      const st = usarStockPorTalle ? (stockMap[t] ?? 0) : Number(producto.stock ?? 0);
+      const disabled = st <= 0 ? "disabled" : "";
+      const label = usarStockPorTalle ? `${t} (stock: ${st})` : t;
+      return `<option value="${t}" ${disabled}>${label}</option>`;
+    }).join("");
+
+    const tallesHtml = tallesArr.length
+      ? `<select class="producto-talles" data-producto="${producto.id}">
+          <option value="">Talle...</option>
+          ${opciones}
+        </select>`
+      : `<div class="muted" style="opacity:.75;font-size:12px">Sin talles</div>`;
+
+    const tieneOferta = Number(producto.precio_oferta) > 0;
+
+    const precioHtml = tieneOferta
+      ? `<p class="producto-precio"><s>$${Number(producto.precio || 0)}</s> <strong>$${Number(producto.precio_oferta)}</strong></p>`
+      : `<p class="producto-precio">$${Number(producto.precio || 0)}</p>`;
+
+    const stockHtml = `<small style="opacity:.75">Stock: ${Number(producto.stock ?? 0)}</small>`;
+
+    const div = document.createElement("div");
+    div.classList.add("producto");
+
+    div.innerHTML = `
+      <img class="producto-imagen" src="${producto.imagen}" alt="${producto.titulo}">
+      <div class="producto-detalles">
+        <h3 class="producto-titulo">${producto.titulo}</h3>
+        ${precioHtml}
+        ${stockHtml}
+        ${tallesHtml}
+        <button class="producto-agregar" id="${producto.id}">Agregar</button>
+      </div>
+    `;
+
+    contenedorProductos.append(div);
+  });
+
+  actualizarBotonesAgregar();
+  activarZoomImagenes();
+}
+
+// =======================
+// Categorías
+// =======================
+botonesCategorias.forEach(boton => {
+  boton.addEventListener("click", (e) => {
+    botonesCategorias.forEach(b => b.classList.remove("active"));
+    e.currentTarget.classList.add("active");
+
+    const catId = e.currentTarget.id;
+
+    if (catId !== "todos") {
+      const productoCategoria = productos.find(p => p?.categoria?.id === catId);
+      tituloPrincipal.innerText = productoCategoria?.categoria?.nombre ?? "Productos";
+      productosBase = productos.filter(p => p?.categoria?.id === catId);
+    } else {
+      tituloPrincipal.innerText = "Todos los productos";
+      productosBase = productos.slice();
+    }
+
+    render();
+  });
+});
+
+// =======================
+// Botón agregar al carrito
+// =======================
+function actualizarBotonesAgregar() {
+  botonesAgregar = document.querySelectorAll(".producto-agregar");
+  botonesAgregar.forEach(boton => boton.addEventListener("click", agregarAlCarrito));
+}
+
+// =======================
+// Carrito (localStorage)
+// =======================
+let productosEnCarrito;
+let productosEnCarritoLS = localStorage.getItem("productos-en-carrito");
+
+if (productosEnCarritoLS) {
+  productosEnCarrito = JSON.parse(productosEnCarritoLS);
+  actualizarNumerito();
+} else {
+  productosEnCarrito = [];
+}
+
+function agregarAlCarrito(e) {
+  const idBoton = String(e.currentTarget.id); // ✅ código de barras
+
+  // Buscar el select de talles del mismo producto
+  const card = e.currentTarget.closest(".producto");
+  const selectTalle = card?.querySelector(".producto-talles");
+  const talleElegido = String(selectTalle?.value || "").trim();
+
+  // si tiene selector de talles, obligar selección
+  if (selectTalle && !talleElegido) {
     Toastify({
-      text: "Producto eliminado",
-      duration: 3000,
+      text: "Elegí un talle primero",
+      duration: 2500,
       close: true,
       gravity: "top",
-      position: "right",
-      stopOnFocus: true,
-      style: {
-        background: "linear-gradient(to right, #111111, #6b6b6b)",
-        borderRadius: "2rem",
-        textTransform: "uppercase",
-        fontSize: ".75rem"
-      },
-      offset: { x: "1.5rem", y: "1.5rem" }
+      position: "right"
     }).showToast();
-
-    const key = e.currentTarget.dataset.key;
-    const index = productosEnCarrito.findIndex(p => (p._key || makeKey(p.id, p.talle)) === key);
-
-    if (index !== -1) {
-      productosEnCarrito.splice(index, 1);
-    }
-
-    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
-    cargarProductosCarrito();
+    return;
   }
 
-  // =========================
-  // Vaciar
-  // =========================
-  botonVaciar?.addEventListener("click", vaciarCarrito);
+  const productoBase = productos.find(p => String(p.id) === idBoton);
+  if (!productoBase) return;
 
-  function vaciarCarrito() {
-    if (!productosEnCarrito || productosEnCarrito.length === 0) return;
+  const key = makeKey(idBoton, talleElegido);
 
-    Swal.fire({
-      title: "¿Estás seguro?",
-      icon: "question",
-      html: `Se van a borrar ${productosEnCarrito.reduce((acc, producto) => acc + Number(producto.cantidad || 0), 0)} productos.`,
-      showCancelButton: true,
-      focusConfirm: false,
-      confirmButtonText: "Sí",
-      cancelButtonText: "No"
-    }).then((result) => {
-      if (result.isConfirmed) {
-        productosEnCarrito = [];
-        localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
-        cargarProductosCarrito();
-      }
+  const idx = productosEnCarrito.findIndex(p => String(p._key || makeKey(p.id, p.talle)) === key);
+
+  if (idx !== -1) {
+    productosEnCarrito[idx].cantidad = Number(productosEnCarrito[idx].cantidad || 0) + 1;
+  } else {
+    productosEnCarrito.push({
+      ...productoBase,
+      cantidad: 1,
+      talle: talleElegido || "",
+      _key: key
     });
   }
 
-  // =========================
-  // Total + Comprar
-  // =========================
-  function actualizarTotal() {
-    const totalCalculado = productosEnCarrito.reduce(
-      (acc, producto) => acc + (getPrecioFinal(producto) * Number(producto.cantidad || 0)),
-      0
-    );
-    if (totalEl) totalEl.innerText = `$${totalCalculado}`;
-  }
+  localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+  actualizarNumerito();
 
-  botonComprar?.addEventListener("click", comprarCarrito);
+  Toastify({
+    text: "Producto agregado",
+    duration: 2500,
+    close: true,
+    gravity: "top",
+    position: "right"
+  }).showToast();
+}
 
-  function comprarCarrito() {
-    productosEnCarrito = [];
-    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+function actualizarNumerito() {
+  const nuevoNumerito = productosEnCarrito.reduce((acc, producto) => acc + Number(producto.cantidad || 0), 0);
+  if (numerito) numerito.innerText = nuevoNumerito;
 
-    contenedorCarritoVacio?.classList.add("disabled");
-    contenedorCarritoProductos?.classList.add("disabled");
-    contenedorCarritoAcciones?.classList.add("disabled");
-    contenedorCarritoComprado?.classList.remove("disabled");
+  const numeritoFloat = document.querySelector("#numerito-float");
+  if (numeritoFloat) numeritoFloat.innerText = nuevoNumerito;
+}
 
-    actualizarNumeritoCarrito();
-    if (totalEl) totalEl.innerText = "$0";
-  }
+// =======================
+// Zoom de imágenes (lightbox)
+// =======================
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
 
-  function actualizarNumeritoCarrito() {
-    const nuevoNumerito = productosEnCarrito.reduce((acc, producto) => acc + Number(producto.cantidad || 0), 0);
-    if (numeritoEl) numeritoEl.innerText = nuevoNumerito;
+function activarZoomImagenes() {
+  if (!lightbox || !lightboxImg) return;
 
-    const numeritoFloat = document.querySelector("#numerito-float");
-    if (numeritoFloat) numeritoFloat.innerText = nuevoNumerito;
-  }
-})();
+  document.querySelectorAll(".producto-imagen").forEach(img => {
+    img.addEventListener("click", () => {
+      lightboxImg.src = img.src;
+      lightbox.style.display = "flex";
+    });
+  });
+}
+
+// cerrar
+lightbox?.addEventListener("click", () => {
+  lightbox.style.display = "none";
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && lightbox) lightbox.style.display = "none";
+});
