@@ -360,7 +360,6 @@ function agregarAlCarrito(e) {
   }).showToast();
 }
 
-
 function actualizarNumerito() {
   const nuevoNumerito = productosEnCarrito.reduce((acc, producto) => acc + Number(producto.cantidad || 0), 0);
   if (numerito) numerito.innerText = nuevoNumerito;
