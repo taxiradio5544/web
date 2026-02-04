@@ -277,13 +277,13 @@ let productosEnCarrito = readCart();
 actualizarNumerito();
 
 function agregarAlCarrito(e) {
-  const idBoton = String(e.currentTarget.id); // ✅ código de barras
+  const idBoton = String(e.currentTarget.id); // código de barras
 
   const card = e.currentTarget.closest(".producto");
   const selectTalle = card?.querySelector(".producto-talles");
   const talleElegido = String(selectTalle?.value || "").trim();
 
-  // si tiene selector de talles, obligar selección
+  // obligar talle si existe
   if (selectTalle && !talleElegido) {
     Toastify({
       text: "Elegí un talle primero",
@@ -298,43 +298,43 @@ function agregarAlCarrito(e) {
   const productoBase = productos.find(p => String(p.id) === idBoton);
   if (!productoBase) return;
 
-  // ✅ Chequeo stock por talle (si existe stock_talles)
+  const key = makeKey(idBoton, talleElegido);
+
+  // cuántos ya tengo en carrito de ese producto+talle
+  const enCarrito = productosEnCarrito.find(p =>
+    (p._key || makeKey(p.id, p.talle)) === key
+  );
+  const cantidadActual = enCarrito ? Number(enCarrito.cantidad || 0) : 0;
+
+  // ===== chequeo stock real =====
   const stockMap = parseStockTalles(productoBase.stock_talles);
   const usarStockPorTalle = Object.keys(stockMap).length > 0;
 
+  let stockDisponible;
+
   if (usarStockPorTalle && talleElegido) {
-    const st = Number(stockMap[talleElegido] ?? 0);
-    if (!Number.isFinite(st) || st <= 0) {
-      Toastify({
-        text: `No hay stock del talle ${talleElegido}`,
-        duration: 2800,
-        close: true,
-        gravity: "top",
-        position: "right"
-      }).showToast();
-      return;
-    }
+    stockDisponible = Number(stockMap[talleElegido] ?? 0);
   } else {
-    // fallback: stock general (si viene)
-    const stockGeneral = (productoBase.stock === "" || productoBase.stock == null) ? 999 : Number(productoBase.stock);
-    if (Number.isFinite(stockGeneral) && stockGeneral <= 0) {
-      Toastify({
-        text: "No hay stock",
-        duration: 2800,
-        close: true,
-        gravity: "top",
-        position: "right"
-      }).showToast();
-      return;
-    }
+    stockDisponible =
+      (productoBase.stock === "" || productoBase.stock == null)
+        ? 999
+        : Number(productoBase.stock);
   }
 
-  const key = makeKey(idBoton, talleElegido);
+  if (cantidadActual >= stockDisponible) {
+    Toastify({
+      text: "No hay más stock disponible de ese talle",
+      duration: 2800,
+      close: true,
+      gravity: "top",
+      position: "right"
+    }).showToast();
+    return;
+  }
 
-  const idx = productosEnCarrito.findIndex(p => String(p._key || makeKey(p.id, p.talle)) === key);
-
-  if (idx !== -1) {
-    productosEnCarrito[idx].cantidad = Number(productosEnCarrito[idx].cantidad || 0) + 1;
+  // ===== agregar normal =====
+  if (enCarrito) {
+    enCarrito.cantidad++;
   } else {
     productosEnCarrito.push({
       ...productoBase,
@@ -344,17 +344,22 @@ function agregarAlCarrito(e) {
     });
   }
 
-  localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+  localStorage.setItem(
+    "productos-en-carrito",
+    JSON.stringify(productosEnCarrito)
+  );
+
   actualizarNumerito();
 
   Toastify({
     text: "Producto agregado",
-    duration: 2500,
+    duration: 2000,
     close: true,
     gravity: "top",
     position: "right"
   }).showToast();
 }
+
 
 function actualizarNumerito() {
   const nuevoNumerito = productosEnCarrito.reduce((acc, producto) => acc + Number(producto.cantidad || 0), 0);
