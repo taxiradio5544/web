@@ -338,7 +338,62 @@
 // =========================
 // Comprar (con descuento real de stock)
 // =========================
-botonComprar?.addEventListener("click", comprarCarrito);
+//botonComprar?.addEventListener("click", comprarCarrito);
+botonComprar?.addEventListener("click", async () => {
+  if (!productosEnCarrito || productosEnCarrito.length === 0) {
+    setVistaVacia();
+    return;
+  }
+
+  const haySinStock = productosEnCarrito.some(p => Number(p._stockDisponible ?? 0) <= 0);
+  if (haySinStock) {
+    Swal.fire({
+      title: "Hay productos sin stock",
+      icon: "warning",
+      text: "Eliminá los que dicen SIN STOCK para poder continuar."
+    });
+    return;
+  }
+
+  const items = productosEnCarrito.map(p => {
+    const pf = precioFinal(p);
+    const title = `${p.titulo}${p.talle ? " - Talle " + p.talle : ""}`;
+    return {
+      id: String(p.id),
+      talle: String(p.talle || "").trim(),
+      title,
+      quantity: Number(p.cantidad || 1),
+      unit_price: Number(pf || 0),
+    };
+  });
+
+  // opcional: si querés pedir datos antes, lo hacemos después
+  const buyer = { name: "", phone: "", address: "", notes: "" };
+
+  try {
+    Swal.fire({ title: "Redirigiendo a Mercado Pago…", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const res = await fetch("/.netlify/functions/mp-create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items, buyer })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok || !data.init_point) {
+      Swal.close();
+      Swal.fire({ icon: "error", title: "Error iniciando pago", text: JSON.stringify(data) });
+      return;
+    }
+
+    // 👉 Redirigir
+    window.location.href = data.init_point;
+
+  } catch (e) {
+    Swal.close();
+    Swal.fire({ icon: "error", title: "Error", text: String(e) });
+  }
+});
 
 async function comprarCarrito() {
   if (!productosEnCarrito || productosEnCarrito.length === 0) {

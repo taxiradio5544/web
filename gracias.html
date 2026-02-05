@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vanocz | Gracias</title>
+  <link rel="stylesheet" href="./css/main.css" />
+</head>
+<body>
+  <main style="max-width:760px;margin:40px auto;padding:0 16px">
+    <h1>✅ Pedido generado</h1>
+    <p id="info"></p>
+
+    <a id="btnwa" class="carrito-acciones-comprar" style="display:inline-block;text-decoration:none">
+      Enviar comprobante por WhatsApp
+    </a>
+
+    <p style="opacity:.75;margin-top:14px">
+      📌 Enviá el comprobante del pago por Mercado Pago y te respondemos cuando estemos abiertos para confirmar y coordinar envío.
+    </p>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const order = params.get("order") || "";
+    const status = params.get("status") || "";
+
+    const info = document.getElementById("info");
+    info.textContent = `Tu pedido: ${order} (${status})`;
+
+    // ⚠️ poné tu número (sin +)
+    const phone = "598XXXXXXXXX";
+
+    const msg =
+`Hola! Hice una compra en Vanocz.
+Pedido: ${order}
+Adjunto comprobante de Mercado Pago.
+Nombre:
+Dirección/Retiro:
+Gracias!`;
+
+    const wa = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    document.getElementById("btnwa").href = wa;
+  </script>
+</body>
+</html>
