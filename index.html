@@ -80,21 +80,16 @@
                 <!-- Esto se va a rellenar con JS -->
             </div>
             <div class="toolbar">
-            <div class="field">
-                <input id="buscador" placeholder="Buscar productos..." />
-            </div>
+            <input id="buscador" class="toolbar-buscador" type="search" placeholder="Buscar producto..." autocomplete="off">
 
-            <div class="field" style="max-width:260px">
-                <select id="ordenar">
-                <option value="relevancia">Relevancia</option>
+            <select id="ordenar" class="toolbar-ordenar">
+                <option value="relevancia" selected>Ordenar</option>
                 <option value="menor">Menor precio</option>
                 <option value="mayor">Mayor precio</option>
-                <option value="az">A → Z</option>
-                <option value="za">Z → A</option>
-                </select>
+                <option value="az">A - Z</option>
+                <option value="za">Z - A</option>
+            </select>
             </div>
-            </div>
-
          
         </main>
     </div>
